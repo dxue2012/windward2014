@@ -271,24 +271,26 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                     }
                     break;
                 case PASSENGER_DELIVERED:
-                    abandonedPassenger = null;
+                    //abandonedPassenger = null;
                     break;
                 case PASSENGER_ABANDONED:
-                    abandonedPassenger = getMyPassenger();
                     pickup = AllPickups(getMe(), getPassengers());
                     ptDest = chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop();
                     break;
                 case PASSENGER_REFUSED_ENEMY:
+                    //abandonedPassenger = getMyPassenger();
+
                     // override algorithm for choosing the company to abandon the passenger
                     java.util.List<Company> comps = getCompanies();
-                    Company abandonCompany = chooseNearestCompany(comps, getMe().getLimo().getPassenger().getDestination());
+                    Company abandonCompany = chooseNearestCompanyWithoutEnemy(comps, getMyPassenger());
                     ptDest = abandonCompany.getBusStop();
                     break;
                 case PASSENGER_DELIVERED_AND_PICKED_UP:
-                    abandonedPassenger = null;
+                    //abandonedPassenger = null;
+                    ptDest = getMe().getLimo().getPassenger().getDestination().getBusStop();
                     break;
                 case PASSENGER_PICKED_UP:
-                    pickup = AllPickups(getMe(), getPassengers());
+                    //pickup = AllPickups(getMe(), getPassengers());
                     ptDest = getMe().getLimo().getPassenger().getDestination().getBusStop();
                     break;
 
@@ -435,6 +437,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
             case CHANGE_DESTINATION:
                 for (Player player : getPlayers()) {
                     // if 3pt CEO in car,  + 20
+                    // might not have a passenger
                     if (player.getLimo().getPassenger().getPointsDelivered() == 3) {
                         score += 20;
                         playOn[0] = player;
@@ -679,10 +682,8 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
     /**
      * Chooses the nearest company to abandon the current passenger. Does not return to the previous
      * company that was refused by the passenger.
-     * @param comps
-     * @param refusedComp
-     * @return the nearest company to abandon the current passenger
      */
+    /*
     public Company chooseNearestCompany(java.util.List<Company> comps, Company refusedComp)
     {
         int shortestDist = Integer.MAX_VALUE;
@@ -691,6 +692,37 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         {
             if (comp.equals(refusedComp))
                 continue;
+            int distToComp = CalculatePathPlus1(getMe(), comp.getBusStop()).size();
+            if (distToComp < shortestDist)
+            {
+                shortestDist = distToComp;
+                nearestComp = comp;
+            }
+        }
+
+        return nearestComp;
+    }
+    */
+
+    public Company chooseNearestCompanyWithoutEnemy(java.util.List<Company> comps, Passenger currPsngr)
+    {
+        int shortestDist = Integer.MAX_VALUE;
+        Company nearestComp = null;
+
+        // get locations of enemies
+        ArrayList<Point> enemyLocations = new ArrayList<Point>();
+        for (Passenger enemy: currPsngr.getEnemies())
+        {
+            if (enemy.getLobby() != null)
+                enemyLocations.add(enemy.getLobby().getBusStop());
+        }
+
+        for (Company comp : comps)
+        {
+            // if this company is the location of an enemy, we ignore this company
+            if (enemyLocations.contains(comp.getBusStop()))
+                continue;
+
             int distToComp = CalculatePathPlus1(getMe(), comp.getBusStop()).size();
             if (distToComp < shortestDist)
             {

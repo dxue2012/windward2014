@@ -271,14 +271,14 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                     }
                     break;
                 case PASSENGER_DELIVERED:
-                    //abandonedPassenger = null;
+                    abandonedPassenger = null;
                     break;
                 case PASSENGER_ABANDONED:
                     pickup = AllPickups(getMe(), getPassengers());
                     ptDest = chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop();
                     break;
                 case PASSENGER_REFUSED_ENEMY:
-                    //abandonedPassenger = getMyPassenger();
+                    abandonedPassenger = getMyPassenger();
 
                     // override algorithm for choosing the company to abandon the passenger
                     java.util.List<Company> comps = getCompanies();
@@ -286,7 +286,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                     ptDest = abandonCompany.getBusStop();
                     break;
                 case PASSENGER_DELIVERED_AND_PICKED_UP:
-                    //abandonedPassenger = null;
+                    abandonedPassenger = null;
                     ptDest = getMe().getLimo().getPassenger().getDestination().getBusStop();
                     break;
                 case PASSENGER_PICKED_UP:
@@ -597,7 +597,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         java.util.ArrayList<Passenger> pickup = new java.util.ArrayList<Passenger>();
 
         for (Passenger psngr : passengers) {
-            if (psngr.equals(abandonedPassenger) || passengersDelivered.contains(psngr))
+            if (psngr.equals(abandonedPassenger))
                 continue;
 
             if ((!me.getPassengersDelivered().contains(psngr)) && (psngr != me.getLimo().getPassenger()) && (psngr.getCar() == null) && (psngr.getLobby() != null) && (psngr.getDestination() != null))

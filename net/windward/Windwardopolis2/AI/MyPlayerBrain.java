@@ -350,14 +350,13 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
 
     private Point getCoffeeDest() {
       java.util.List<CoffeeStore> cof = getCoffeeStores();
-      Collections.sort(cof, new Comparator<CoffeeStore>() {
+      return Collections.min(cof, new Comparator<CoffeeStore>() {
         public int compare (CoffeeStore a, CoffeeStore b) {
           Integer distA = SimpleAStar.CalculatePath(getGameMap(), getMe().getLimo().getMapPosition(), a.getBusStop()).size();
           Integer distB = SimpleAStar.CalculatePath(getGameMap(), getMe().getLimo().getMapPosition(), b.getBusStop()).size();
           return Integer.compare(distA, distB);
         }
-      });
-    return cof.get(0).getBusStop();
+      }).getBusStop();
   }
 
 

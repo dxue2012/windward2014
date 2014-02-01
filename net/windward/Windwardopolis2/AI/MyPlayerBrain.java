@@ -128,6 +128,11 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
     private void setPowerUpHand(ArrayList<PowerUp> value) { privatePowerUpHand = value; }
 
     /**
+     * Abandonment Factor
+     */
+    public final double ABANDONMENT_FACTOR = 2;
+
+    /**
      * Me (my player object).
      */
     private Player privateMe;
@@ -242,7 +247,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
             // bugbug - we return if not us because the below code is only for when we need a new path or our limo hit a bus stop.
             // if you want to act on other players arriving at bus stops, you need to remove this. But make sure you use Me, not
             // plyrStatus for the Player you are updatiing (particularly to determine what tile to start your path from).
-            if (plyrStatus != getMe()) {
+            if (plyrStatus != getMe() && status != PlayerAIBase.STATUS.POWER_UP_PLAYED) {
                 return;
             }
 
@@ -259,70 +264,99 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
             Point ptDest = null;
             java.util.ArrayList<Passenger> pickup = new java.util.ArrayList<Passenger>();
 
-
-            switch (status) {
-                case NO_PATH:
-                case PASSENGER_NO_ACTION:
-                    if (getMe().getLimo().getPassenger() == null) {
-                        pickup = AllPickups(plyrStatus, getPassengers());
-                        ptDest = chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop();
-                    } else {
-                        ptDest = getMe().getLimo().getPassenger().getDestination().getBusStop();
-                    }
-                    break;
-                case PASSENGER_DELIVERED:
-                    abandonedPassenger = null;
-                    break;
-                case PASSENGER_ABANDONED:
-                    pickup = AllPickups(getMe(), getPassengers());
-                    ptDest = chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop();
-                    break;
-                case PASSENGER_REFUSED_ENEMY:
-                    abandonedPassenger = getMyPassenger();
-
-                    // override algorithm for choosing the company to abandon the passenger
-                    java.util.List<Company> comps = getCompanies();
-                    Company abandonCompany = chooseNearestCompanyWithoutEnemy(comps, getMyPassenger());
-                    ptDest = abandonCompany.getBusStop();
-                    break;
-                case PASSENGER_DELIVERED_AND_PICKED_UP:
-                    abandonedPassenger = null;
-                    ptDest = getMe().getLimo().getPassenger().getDestination().getBusStop();
-                    break;
-                case PASSENGER_PICKED_UP:
-                    //pickup = AllPickups(getMe(), getPassengers());
-                    ptDest = getMe().getLimo().getPassenger().getDestination().getBusStop();
-                    break;
-
+            if (getMe().getLimo().getCoffeeServings() <= 0 && getMe().getLimo().getPassenger() == null) {
+                ptDest = getCoffeeDest();
             }
-            // coffee store override
-          if (getMe().getLimo().getCoffeeServings() <= 0) {
-            switch (status)
+            else
             {
-                case PASSENGER_DELIVERED_AND_PICKED_UP:
-                case PASSENGER_DELIVERED:
-                case PASSENGER_ABANDONED:
-                    ptDest = getCoffeeDest();
-                    break;
-            }
-          }
-          switch (status)
-          {
-                case PASSENGER_REFUSED_NO_COFFEE:
-                case PASSENGER_DELIVERED_AND_PICK_UP_REFUSED:
-                    ptDest = getCoffeeDest();
-                    break;
-                case COFFEE_STORE_CAR_RESTOCKED:
-                    pickup = AllPickups(getMe(), getPassengers());
-                    if (pickup.size() == 0)
+                switch (status) {
+                    case NO_PATH:
+                    case PASSENGER_NO_ACTION:
+                        if (getMe().getLimo().getPassenger() == null) {
+                            pickup = AllPickups(plyrStatus, getPassengers());
+                            ptDest = chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop();
+                        } else {
+                            ptDest = getMe().getLimo().getPassenger().getDestination().getBusStop();
+                        }
                         break;
-                    ptDest = chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop();
-                    break;
-            }
+                    case PASSENGER_DELIVERED:
+                        abandonedPassenger = null;
+                        break;
+                    case PASSENGER_ABANDONED:
+                        pickup = AllPickups(getMe(), getPassengers());
+                        ptDest = chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop();
+                        break;
+                    case PASSENGER_REFUSED_ENEMY:
+                        abandonedPassenger = getMyPassenger();
 
-            // may be another status
-            if(ptDest == null)
-                return;
+                        // override algorithm for choosing the company to abandon the passenger
+                        java.util.List<Company> comps = getCompanies();
+                        Company abandonCompany = chooseNearestCompanyWithoutEnemy(comps, getMyPassenger());
+                        ptDest = abandonCompany.getBusStop();
+                        break;
+                    case PASSENGER_DELIVERED_AND_PICKED_UP:
+                        abandonedPassenger = null;
+                        ptDest = getMe().getLimo().getPassenger().getDestination().getBusStop();
+                        break;
+                    case PASSENGER_PICKED_UP:
+                        //pickup = AllPickups(getMe(), getPassengers());
+                        ptDest = getMe().getLimo().getPassenger().getDestination().getBusStop();
+                        break;
+
+                }
+                // coffee store override
+                if (getMe().getLimo().getCoffeeServings() <= 0) {
+                    switch (status)
+                    {
+                        case PASSENGER_DELIVERED_AND_PICKED_UP:
+                        case PASSENGER_DELIVERED:
+                        case PASSENGER_ABANDONED:
+                            ptDest = getCoffeeDest();
+                            break;
+                    }
+                }
+
+                switch (status)
+                {
+                    case PASSENGER_REFUSED_NO_COFFEE:
+                    case PASSENGER_DELIVERED_AND_PICK_UP_REFUSED:
+                        ptDest = getCoffeeDest();
+                        break;
+                    case COFFEE_STORE_CAR_RESTOCKED:
+                        pickup = AllPickups(getMe(), getPassengers());
+                        if (pickup.size() == 0)
+                            break;
+                        ptDest = chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop();
+                        break;
+                }
+
+                if (status == PlayerAIBase.STATUS.POWER_UP_PLAYED)
+                {
+                    // if we are out of coffee
+                    if (getMe().getLimo().getCoffeeServings() <= 0)
+                        ptDest = getCoffeeDest();
+                        // if we have a passenger
+                    else if (getMyPassenger() != null)
+                    {
+                        double abandon = evaluateAbandonment(getMyPassenger());
+                        double cont = evaluateCurrentDelivery(getMyPassenger());
+                        if (cont < (abandon * ABANDONMENT_FACTOR))
+                        {
+                            java.util.List<Company> comps = getCompanies();
+                            ptDest = chooseNearestCompanyWithoutEnemy(comps, getMyPassenger()).getBusStop();
+                        }
+                    }
+                    else {
+                        // we don't have a passenger
+                        pickup = AllPickups(getMe(), getPassengers());
+                        ptDest = chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop();
+                    }
+                }
+
+                // may be another status
+                if(ptDest == null)
+                    return;
+            }
 
             DisplayOrders(ptDest);
 
@@ -351,15 +385,15 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
     }
 
     private Point getCoffeeDest() {
-      java.util.List<CoffeeStore> cof = getCoffeeStores();
-      return Collections.min(cof, new Comparator<CoffeeStore>() {
-        public int compare (CoffeeStore a, CoffeeStore b) {
-          Integer distA = SimpleAStar.CalculatePath(getGameMap(), getMe().getLimo().getMapPosition(), a.getBusStop()).size();
-          Integer distB = SimpleAStar.CalculatePath(getGameMap(), getMe().getLimo().getMapPosition(), b.getBusStop()).size();
-          return Integer.compare(distA, distB);
-        }
-      }).getBusStop();
-  }
+        java.util.List<CoffeeStore> cof = getCoffeeStores();
+        return Collections.min(cof, new Comparator<CoffeeStore>() {
+            public int compare (CoffeeStore a, CoffeeStore b) {
+                Integer distA = SimpleAStar.CalculatePath(getGameMap(), getMe().getLimo().getMapPosition(), a.getBusStop()).size();
+                Integer distB = SimpleAStar.CalculatePath(getGameMap(), getMe().getLimo().getMapPosition(), b.getBusStop()).size();
+                return Integer.compare(distA, distB);
+            }
+        }).getBusStop();
+    }
 
 
     private void MaybePlayPowerUp() {
@@ -612,6 +646,29 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         return pickup;
     }
 
+
+    /**
+     *
+     * @param me
+     * @param passengers
+     * @param exclude We exclude this passenger
+     * @return
+     */
+    private java.util.ArrayList<Passenger> AllPickups(Player me, Iterable<Passenger> passengers, Passenger exclude) {
+        java.util.ArrayList<Passenger> pickup = new java.util.ArrayList<Passenger>();
+
+        for (Passenger psngr : passengers) {
+            if (psngr.equals(abandonedPassenger) || psngr.equals(exclude))
+                continue;
+
+            if ((!me.getPassengersDelivered().contains(psngr)) && (psngr != me.getLimo().getPassenger()) && (psngr.getCar() == null) && (psngr.getLobby() != null) && (psngr.getDestination() != null))
+                pickup.add(psngr);
+        }
+
+        //add sort by random so no loops for can't pickup
+        return pickup;
+    }
+
     /*
     Below is our own code
 
@@ -671,42 +728,10 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
             int totalDist = distToDest + distToPassenger;
             double currPoint = (double) psngr.getPointsDelivered() / totalDist;
             passengersByValue.put(currPoint, psngr);
-            /*
-            if (currPoint > currMaxPoint)
-            {
-                bestPsngr = psngr;
-                currMaxPoint = currPoint;
-            }
-            */
         }
 
         return passengersByValue;
     }
-
-    /**
-     * Chooses the nearest company to abandon the current passenger. Does not return to the previous
-     * company that was refused by the passenger.
-     */
-    /*
-    public Company chooseNearestCompany(java.util.List<Company> comps, Company refusedComp)
-    {
-        int shortestDist = Integer.MAX_VALUE;
-        Company nearestComp = null;
-        for (Company comp : comps)
-        {
-            if (comp.equals(refusedComp))
-                continue;
-            int distToComp = CalculatePathPlus1(getMe(), comp.getBusStop()).size();
-            if (distToComp < shortestDist)
-            {
-                shortestDist = distToComp;
-                nearestComp = comp;
-            }
-        }
-
-        return nearestComp;
-    }
-    */
 
     public Company chooseNearestCompanyWithoutEnemy(java.util.List<Company> comps, Passenger currPsngr)
     {
@@ -736,5 +761,23 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         }
 
         return nearestComp;
+    }
+
+    public double evaluateAbandonment(Passenger currPsngr)
+    {
+        // we choose the best passenger who's not our current passenger
+        Passenger psngr = chooseBestPassenger(getAvailablePassengers(AllPickups(getMe(), getPassengers(), currPsngr)));
+        int distToPassenger = CalculatePathPlus1(getMe(), psngr.getLobby().getBusStop()).size();
+        int distToDest = SimpleAStar.CalculatePath(
+                getGameMap(), psngr.getLobby().getBusStop(), psngr.getDestination().getBusStop()).size();
+        int totalDist = distToDest + distToPassenger;
+        return (double) psngr.getPointsDelivered() / totalDist;
+    }
+
+    public double evaluateCurrentDelivery(Passenger currPsngr)
+    {
+        int distToDest = CalculatePathPlus1(getMe(), currPsngr.getDestination().getBusStop()).size();
+        double valueOfCurrentDelivery = (double) currPsngr.getPointsDelivered() / distToDest;
+        return valueOfCurrentDelivery;
     }
 }

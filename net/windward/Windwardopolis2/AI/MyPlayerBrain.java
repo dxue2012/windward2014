@@ -267,15 +267,10 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                     ptDest = choosePassenger(pickup).getLobby().getBusStop();
                     break;
                 case PASSENGER_REFUSED_ENEMY:
-                    //add in random so no refuse loop
+                    // override algorithm for choosing the company to abandon the passenger
                     java.util.List<Company> comps = getCompanies();
-                    while(ptDest == null) {
-                        int randCompany = rand.nextInt(comps.size());
-                        if (comps.get(randCompany) != getMe().getLimo().getPassenger().getDestination()) {
-                            ptDest = comps.get(randCompany).getBusStop();
-                            break;
-                        }
-                    }
+                    Company abandonCompany = chooseNearestCompany(comps, getMe().getLimo().getPassenger().getDestination());
+                    ptDest = abandonCompany.getBusStop();
                     break;
                 case PASSENGER_DELIVERED_AND_PICKED_UP:
                 case PASSENGER_PICKED_UP:
@@ -544,11 +539,11 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         Passenger bestPsngr = null;
         for (Passenger psngr: pickup)
         {
-            int distToPassenger = CalculatePathPlus1(getMe(), psngr.getCar().getMapPosition()).size();
+            int distToPassenger = CalculatePathPlus1(getMe(), psngr.getLobby().getBusStop()).size();
             int distToDest = SimpleAStar.CalculatePath(
                     getGameMap(), psngr.getLobby().getBusStop(), psngr.getDestination().getBusStop()).size();
             int totalDist = distToDest + distToPassenger;
-            double currPoint = psngr.getPointsDelivered() / totalDist;
+            double currPoint = (double) psngr.getPointsDelivered() / totalDist;
             if (currPoint > currMaxPoint)
             {
                 bestPsngr = psngr;
@@ -557,5 +552,24 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         }
 
         return bestPsngr;
+    }
+
+    public Company chooseNearestCompany(java.util.List<Company> comps, Company refusedComp)
+    {
+        int shortestDist = Integer.MAX_VALUE;
+        Company nearestComp = null;
+        for (Company comp : comps)
+        {
+            if (comp.equals(refusedComp))
+                continue;
+            int distToComp = CalculatePathPlus1(getMe(), comp.getBusStop()).size();
+            if (distToComp < shortestDist)
+            {
+                shortestDist = distToComp;
+                nearestComp = comp;
+            }
+        }
+
+        return nearestComp;
     }
 }

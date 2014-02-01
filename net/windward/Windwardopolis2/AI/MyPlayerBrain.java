@@ -382,7 +382,9 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         // which cards can we play?
         ArrayList<PowerUp> canPlay = new ArrayList<PowerUp>();
         for(PowerUp current : getPowerUpHand()) {
-            if(current.isOkToPlay()) canPlay.add(current);
+            // always discard MULT_DELIVERY QUANT_SPEED
+            if(current.getCard() == PowerUp.CARD.MULT_DELIVERY_QUARTER_SPEED) playCards.invoke(PlayerAIBase.CARD_ACTION.DISCARD, current);
+            else if(current.isOkToPlay()) canPlay.add(current);
         }
 
         if (canPlay.isEmpty()) return;
@@ -432,13 +434,15 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         switch (pu.getCard()) {
             case MOVE_PASSENGER:
                 // if we're not about to pick up the 3pt CEO, move her
-                if (nextPsngr.getPointsDelivered() != 3) score = 10;
+                if (nextPsngr.getPointsDelivered() != 3) {
+                    score = 10;
+                    // +100 if one of her enemies is there ...
+                }
                 break;
             case CHANGE_DESTINATION:
                 for (Player player : getPlayers()) {
                     // if 3pt CEO in car,  + 20
-                    // might not have a passenger
-                    if (player.getLimo().getPassenger().getPointsDelivered() == 3) {
+                    if (player.getLimo().getPassenger() != null && player.getLimo().getPassenger().getPointsDelivered() == 3) {
                         score += 20;
                         playOn[0] = player;
                         break;
@@ -450,9 +454,9 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                     playOn[0] = high;
                 }
                 break;
-            case MULT_DELIVERY_QUARTER_SPEED:
-                score = 50; // random placeholder
-                break;
+            /*case MULT_DELIVERY_QUARTER_SPEED:
+                score = 0; // never play, always discard
+                break;*/
             case ALL_OTHER_CARS_QUARTER_SPEED:
                 score = 50;
                 break;
@@ -463,7 +467,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                 }
                 break;
             case RELOCATE_ALL_CARS:
-                score = 50; // random placeholder
+                if (getMe().getLimo().getPassenger() == null) score = 20;
                 break;
             case RELOCATE_ALL_PASSENGERS:
                 if (getMe().getLimo().getPassenger() != null) {

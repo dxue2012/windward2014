@@ -88,6 +88,8 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
      */
     private java.util.ArrayList<Passenger> privatePassengers;
 
+    private static Passenger abandonedPassenger;
+
     public final java.util.ArrayList<Passenger> getPassengers() {
         return privatePassengers;
     }
@@ -160,6 +162,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
 
     public MyPlayerBrain(String name) {
         setName(!net.windward.Windwardopolis2.DotNetToJavaStringHelper.isNullOrEmpty(name) ? name : NAME);
+        abandonedPassenger = null;
         privatePowerUpHand = new ArrayList<PowerUp>();
     }
 
@@ -262,7 +265,10 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                     }
                     break;
                 case PASSENGER_DELIVERED:
+                    abandonedPassenger = null;
+                    break;
                 case PASSENGER_ABANDONED:
+                    abandonedPassenger = getMyPassenger();
                     pickup = AllPickups(getMe(), getPassengers());
                     ptDest = chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop();
                     break;
@@ -273,6 +279,8 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                     ptDest = abandonCompany.getBusStop();
                     break;
                 case PASSENGER_DELIVERED_AND_PICKED_UP:
+                    abandonedPassenger = null;
+                    break;
                 case PASSENGER_PICKED_UP:
                     pickup = AllPickups(getMe(), getPassengers());
                     ptDest = getMe().getLimo().getPassenger().getDestination().getBusStop();
@@ -517,6 +525,9 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         java.util.ArrayList<Passenger> pickup = new java.util.ArrayList<Passenger>();
 
         for (Passenger psngr : passengers) {
+            if (psngr.equals(abandonedPassenger))
+                continue;
+
             if ((!me.getPassengersDelivered().contains(psngr)) && (psngr != me.getLimo().getPassenger()) && (psngr.getCar() == null) && (psngr.getLobby() != null) && (psngr.getDestination() != null))
                 pickup.add(psngr);
         }

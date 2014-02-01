@@ -16,6 +16,8 @@ import java.awt.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 /**
  * The sample C# AI. Start with this project but write your own code as this is a very simplistic implementation of the AI.
@@ -291,15 +293,27 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                 case PASSENGER_ABANDONED:
                     if (getMe().getLimo().getCoffeeServings() <= 0) {
                         java.util.List<CoffeeStore> cof = getCoffeeStores();
-                        int randCof = rand.nextInt(cof.size());
-                        ptDest = cof.get(randCof).getBusStop();
+                        Collections.sort(cof, new Comparator<CoffeeStore>() {
+                          public int compare (CoffeeStore a, CoffeeStore b) {
+                            Integer distA = SimpleAStar.CalculatePath(getGameMap(), getMe().getLimo().getMapPosition(), a.getBusStop()).size();
+                            Integer distB = SimpleAStar.CalculatePath(getGameMap(), getMe().getLimo().getMapPosition(), b.getBusStop()).size();
+                            return Integer.compare(distA, distB);
+                          }
+                      });
+                      ptDest = cof.get(0).getBusStop();
                     }
                     break;
                 case PASSENGER_REFUSED_NO_COFFEE:
                 case PASSENGER_DELIVERED_AND_PICK_UP_REFUSED:
                     java.util.List<CoffeeStore> cof = getCoffeeStores();
-                    int randCof = rand.nextInt(cof.size());
-                    ptDest = cof.get(randCof).getBusStop();
+                  Collections.sort(cof, new Comparator<CoffeeStore>() {
+                    public int compare (CoffeeStore a, CoffeeStore b) {
+                      Integer distA = SimpleAStar.CalculatePath(getGameMap(), getMe().getLimo().getMapPosition(), a.getBusStop()).size();
+                      Integer distB = SimpleAStar.CalculatePath(getGameMap(), getMe().getLimo().getMapPosition(), b.getBusStop()).size();
+                      return Integer.compare(distA, distB);
+                    }
+                  });
+                  ptDest = cof.get(0).getBusStop();
                     break;
                 case COFFEE_STORE_CAR_RESTOCKED:
                     pickup = AllPickups(getMe(), getPassengers());

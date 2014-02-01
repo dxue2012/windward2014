@@ -378,50 +378,112 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
             return;
         }
 
-        // can we play one?
-        PowerUp pu2 = null;
+        // which cards can we play?
+        ArrayList<PowerUp> canPlay = new ArrayList<PowerUp>();
         for(PowerUp current : getPowerUpHand()) {
-            if(current.isOkToPlay()) {
-                pu2 = current;
-                break;
-            }
+            if(current.isOkToPlay()) canPlay.add(current);
         }
 
-        if (pu2 == null)
-            return;
+        if (canPlay.isEmpty()) return;
+        // Evaluate value of cards
+        float highValue = 0;
+        PowerUp toPlay = null;
+        Player[] playOn = new Player[1];
+        for (PowerUp pu : canPlay) {
+            if (evaluatePowerUp(pu, playOn) > highValue) toPlay = pu;
+        }
+        if (toPlay == null) return;
+
         // 10% discard, 90% play
-        if (rand.nextInt(10) == 0)
-            playCards.invoke(PlayerAIBase.CARD_ACTION.DISCARD, pu2);
-        else
+        /* if (rand.nextInt(10) == 0)
+           playCards.invoke(PlayerAIBase.CARD_ACTION.DISCARD, pu2);
+        else */
         {
-            if (pu2.getCard() == PowerUp.CARD.MOVE_PASSENGER) {
-                Passenger toUseCardOn = null;
-                for(Passenger pass : privatePassengers) {
-                    if(pass.getCar() == null) {
-                        toUseCardOn = pass;
+            if (toPlay.getCard() == PowerUp.CARD.MOVE_PASSENGER) {
+                // Passenger toUseCardOn = playOn[0];
+                for (Passenger CEO : getPassengers()) {
+                    if (CEO.getPointsDelivered() == 3) toPlay.setPassenger(CEO);
+                }
+            }
+            if (toPlay.getCard() == PowerUp.CARD.CHANGE_DESTINATION || toPlay.getCard() == PowerUp.CARD.STOP_CAR) {
+                toPlay.setPlayer(playOn[0]);
+            }
+            if (log.isInfoEnabled())
+                log.info("Request play card " + toPlay);
+            playCards.invoke(PlayerAIBase.CARD_ACTION.PLAY, toPlay);
+        }
+        privatePowerUpHand.remove(toPlay);
+    }
+
+    private float evaluatePowerUp(PowerUp pu, Player[] playOn) {
+        float score = 0;
+        float hiscore = 0;
+        Player high = getMe();
+        for (Player player : getPlayers()) {
+            float playerScore = player.getScore();
+            if (playerScore > hiscore && player != getMe()) {
+                hiscore = playerScore;
+                high = player;
+            }
+        }
+        Passenger nextPsngr = getMe().getPickUp().get(0);
+
+        switch (pu.getCard()) {
+            case MOVE_PASSENGER:
+                // if we're not about to pick up the 3pt CEO, move her
+                if (nextPsngr.getPointsDelivered() != 3) score = 10;
+                break;
+            case CHANGE_DESTINATION:
+                for (Player player : getPlayers()) {
+                    // if 3pt CEO in car,  + 20
+                    if (player.getLimo().getPassenger().getPointsDelivered() == 3) {
+                        score += 20;
+                        playOn[0] = player;
                         break;
                     }
                 }
-                pu2.setPassenger(toUseCardOn);
-            }
-            if (pu2.getCard() == PowerUp.CARD.CHANGE_DESTINATION || pu2.getCard() == PowerUp.CARD.STOP_CAR)
-            {
-                java.util.ArrayList<Player> plyrsWithPsngrs = new ArrayList<Player>();
-                for(Player play : privatePlayers) {
-                    if(play.getGuid() != getMe().getGuid() && play.getLimo().getPassenger() != null) {
-                        plyrsWithPsngrs.add(play);
-                    }
+                // if leading car: +10 * (CEO pt)
+                if (high.getLimo().getPassenger() != null) {
+                    score += (10 * high.getLimo().getPassenger().getPointsDelivered());
+                    playOn[0] = high;
                 }
-
-                if (plyrsWithPsngrs.size() == 0)
-                    return;
-                pu2.setPlayer(plyrsWithPsngrs.get(0));
-            }
-            if (log.isInfoEnabled())
-                log.info("Request play card " + pu2);
-            playCards.invoke(PlayerAIBase.CARD_ACTION.PLAY, pu2);
+                break;
+            case MULT_DELIVERY_QUARTER_SPEED:
+                score = 50; // random placeholder
+                break;
+            case ALL_OTHER_CARS_QUARTER_SPEED:
+                score = 50;
+                break;
+            case STOP_CAR:
+                if (getMe().getScore() < hiscore) {
+                    score = 15 * (hiscore - getMe().getScore());
+                    playOn[0] = high;
+                }
+                break;
+            case RELOCATE_ALL_CARS:
+                score = 50; // random placeholder
+                break;
+            case RELOCATE_ALL_PASSENGERS:
+                if (getMe().getLimo().getPassenger() != null) {
+                    int noRelocCEOs = 0;
+                    for (Player player : getPlayers()) {
+                        if (player.getLimo().getPassenger() != null) noRelocCEOs += 1;
+                    }
+                    score = 5 * noRelocCEOs;
+                }
+                break;
+            case MULT_DELIVERING_PASSENGER:
+                if (nextPsngr == pu.getPassenger()) {
+                    score = 50 * nextPsngr.getPointsDelivered();
+                }
+                break;
+            case MULT_DELIVER_AT_COMPANY:
+                if (nextPsngr.getDestination() == pu.getCompany()) {
+                    score = 50 * nextPsngr.getPointsDelivered();
+                }
+                break;
         }
-        privatePowerUpHand.remove(pu2);
+        return score;
     }
 
     /**

@@ -18,6 +18,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 
 /**
  * The sample C# AI. Start with this project but write your own code as this is a very simplistic implementation of the AI.
@@ -88,7 +89,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
      */
     private java.util.ArrayList<Passenger> privatePassengers;
 
-    private static Passenger abandonedPassenger;
+    private Passenger abandonedPassenger;
 
     public final java.util.ArrayList<Passenger> getPassengers() {
         return privatePassengers;
@@ -153,6 +154,8 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
 
     private PlayerAIBase.PlayerCardEvent playCards;
 
+    private HashSet<Passenger> passengersDelivered;
+
     /**
      * The maximum number of trips allowed before a refill is required.
      */
@@ -164,6 +167,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         setName(!net.windward.Windwardopolis2.DotNetToJavaStringHelper.isNullOrEmpty(name) ? name : NAME);
         abandonedPassenger = null;
         privatePowerUpHand = new ArrayList<PowerUp>();
+        passengersDelivered = new HashSet<Passenger>();
     }
 
     /**
@@ -254,6 +258,8 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
 
             Point ptDest = null;
             java.util.ArrayList<Passenger> pickup = new java.util.ArrayList<Passenger>();
+
+
             switch (status) {
                 case NO_PATH:
                 case PASSENGER_NO_ACTION:
@@ -287,17 +293,19 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                     break;
 
             }
-
             // coffee store override
+          if (getMe().getLimo().getCoffeeServings() <= 0) {
             switch (status)
             {
                 case PASSENGER_DELIVERED_AND_PICKED_UP:
                 case PASSENGER_DELIVERED:
                 case PASSENGER_ABANDONED:
-                    if (getMe().getLimo().getCoffeeServings() <= 0) {
-                      ptDest = getCoffeeDest();
-                    }
+                    ptDest = getCoffeeDest();
                     break;
+            }
+          }
+          switch (status)
+          {
                 case PASSENGER_REFUSED_NO_COFFEE:
                 case PASSENGER_DELIVERED_AND_PICK_UP_REFUSED:
                     ptDest = getCoffeeDest();
@@ -438,6 +446,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
             case PASSENGER_DELIVERED:
                 msg = getMyPassenger().getName() + " delivered to " + getMyPassenger().getLobby().getName();
                 privateMyPassenger = null;
+                passengersDelivered.add(getMyPassenger());
                 break;
             case PASSENGER_ABANDONED:
                 msg = getMyPassenger().getName() + " abandoned at " + getMyPassenger().getLobby().getName();
@@ -451,6 +460,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                 msg = getMyPassenger().getName() + " delivered at " + getMyPassenger().getLobby().getName() + " and " +
                         plyrStatus.getLimo().getPassenger().getName() + " picked up";
                 privateMyPassenger = plyrStatus.getLimo().getPassenger();
+                passengersDelivered.add(getMyPassenger());
                 break;
             case PASSENGER_PICKED_UP:
                 msg = plyrStatus.getLimo().getPassenger().getName() + " picked up";
@@ -462,6 +472,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
             case PASSENGER_DELIVERED_AND_PICK_UP_REFUSED:
                 msg = getMyPassenger().getName() + " delivered at " + getMyPassenger().getLobby().getName() +
                         ", new passenger refused to board limo, no coffee";
+                passengersDelivered.add(getMyPassenger());
                 break;
             case COFFEE_STORE_CAR_RESTOCKED:
                 msg = "Coffee restocked!";
@@ -518,11 +529,11 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         return path;
     }
 
-    private static java.util.ArrayList<Passenger> AllPickups(Player me, Iterable<Passenger> passengers) {
+    private java.util.ArrayList<Passenger> AllPickups(Player me, Iterable<Passenger> passengers) {
         java.util.ArrayList<Passenger> pickup = new java.util.ArrayList<Passenger>();
 
         for (Passenger psngr : passengers) {
-            if (psngr.equals(abandonedPassenger))
+            if (psngr.equals(abandonedPassenger) || passengersDelivered.contains(psngr))
                 continue;
 
             if ((!me.getPassengersDelivered().contains(psngr)) && (psngr != me.getLimo().getPassenger()) && (psngr.getCar() == null) && (psngr.getLobby() != null) && (psngr.getDestination() != null))

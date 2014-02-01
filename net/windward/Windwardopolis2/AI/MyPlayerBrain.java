@@ -402,12 +402,33 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         // which cards can we play?
         ArrayList<PowerUp> canPlay = new ArrayList<PowerUp>();
         for(PowerUp current : getPowerUpHand()) {
+            //System.out.println(current.getCard().name());
             // always discard MULT_DELIVERY QUANT_SPEED
             if(current.getCard() == PowerUp.CARD.MULT_DELIVERY_QUARTER_SPEED) playCards.invoke(PlayerAIBase.CARD_ACTION.DISCARD, current);
             else if(current.isOkToPlay()) canPlay.add(current);
         }
 
-        if (canPlay.isEmpty()) return;
+        if (canPlay.isEmpty()) {
+            // discard cards
+            if (Math.random() < .98) {
+                if (!getPowerUpHand().isEmpty()) System.out.println("Discarding");
+                for (PowerUp current : getPowerUpHand()) {
+                    if (current.getCard().equals(PowerUp.CARD.MULT_DELIVER_AT_COMPANY) || current.getCard().equals(PowerUp.CARD.MULT_DELIVERING_PASSENGER)) {
+                        System.out.println("Discarded");
+                        playCards.invoke(PlayerAIBase.CARD_ACTION.DISCARD, current);
+                        privatePowerUpHand.remove(current);
+                        break;
+                    }
+                    else if (Math.random() < .63) {
+                        System.out.println("Discarded");
+                        playCards.invoke(PlayerAIBase.CARD_ACTION.DISCARD, current);
+                        privatePowerUpHand.remove(current);
+                        break;
+                    }
+                }
+            }
+            return;
+        }
         // Evaluate value of cards
         float highValue = 0;
         PowerUp toPlay = null;
@@ -415,26 +436,42 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         for (PowerUp pu : canPlay) {
             if (evaluatePowerUp(pu, playOn) > highValue) toPlay = pu;
         }
-        if (toPlay == null) return;
-
-        // 10% discard, 90% play
-        /* if (rand.nextInt(10) == 0)
-           playCards.invoke(PlayerAIBase.CARD_ACTION.DISCARD, pu2);
-        else */
-        {
-            if (toPlay.getCard() == PowerUp.CARD.MOVE_PASSENGER) {
-                // Passenger toUseCardOn = playOn[0];
-                for (Passenger CEO : getPassengers()) {
-                    if (CEO.getPointsDelivered() == 3) toPlay.setPassenger(CEO);
+        if (toPlay == null)  {
+            // discard cards
+            if (Math.random() < .5) {
+                if (!getPowerUpHand().isEmpty()) System.out.println("Discarding");
+                for (PowerUp current : getPowerUpHand()) {
+                    if (current.getCard().equals(PowerUp.CARD.MULT_DELIVER_AT_COMPANY) || current.getCard().equals(PowerUp.CARD.MULT_DELIVERING_PASSENGER)) {
+                        System.out.println("Discarded");
+                        playCards.invoke(PlayerAIBase.CARD_ACTION.DISCARD, current);
+                        privatePowerUpHand.remove(current);
+                        break;
+                    }
+                    else if (Math.random() < .7) {
+                        System.out.println("Discarded");
+                        playCards.invoke(PlayerAIBase.CARD_ACTION.DISCARD, current);
+                        privatePowerUpHand.remove(current);
+                        break;
+                    }
                 }
             }
-            if (toPlay.getCard() == PowerUp.CARD.CHANGE_DESTINATION || toPlay.getCard() == PowerUp.CARD.STOP_CAR) {
-                toPlay.setPlayer(playOn[0]);
-            }
-            if (log.isInfoEnabled())
-                log.info("Request play card " + toPlay);
-            playCards.invoke(PlayerAIBase.CARD_ACTION.PLAY, toPlay);
+            return;
         }
+
+        if (toPlay.getCard() == PowerUp.CARD.MOVE_PASSENGER) {
+            // Passenger toUseCardOn = playOn[0];
+            for (Passenger CEO : getPassengers()) {
+                if (CEO.getPointsDelivered() == 3) toPlay.setPassenger(CEO);
+            }
+        }
+        if (toPlay.getCard() == PowerUp.CARD.CHANGE_DESTINATION || toPlay.getCard() == PowerUp.CARD.STOP_CAR) {
+            toPlay.setPlayer(playOn[0]);
+        }
+        if (log.isInfoEnabled())
+            log.info("Request play card " + toPlay);
+        System.out.println("Request play card " + toPlay.getCard().name());
+        playCards.invoke(PlayerAIBase.CARD_ACTION.PLAY, toPlay);
+
         privatePowerUpHand.remove(toPlay);
     }
 
@@ -456,7 +493,12 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                 // if we're not about to pick up the 3pt CEO, move her
                 if (nextPsngr.getPointsDelivered() != 3) {
                     score = 10;
-                    // +100 if one of her enemies is there ...
+                    if (getMyPassenger() != null && getMyPassenger().getPointsDelivered() == 3) {
+                        // +100 if one of her enemies is there ...
+                        java.util.List<Passenger> overlaps = getMyPassenger().getDestination().getPassengers();
+                        overlaps.retainAll(getMyPassenger().getEnemies());
+                        if (overlaps.size() == 1) score += 100;
+                    }
                 }
                 break;
             case CHANGE_DESTINATION:
@@ -621,7 +663,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         java.util.ArrayList<Passenger> pickup = new java.util.ArrayList<Passenger>();
 
         for (Passenger psngr : passengers) {
-            if (psngr.equals(abandonedPassenger))
+            if (psngr.equals(abandonedPassenger) || passengersDelivered.contains(psngr))
                 continue;
 
             if ((!me.getPassengersDelivered().contains(psngr)) && (psngr != me.getLimo().getPassenger()) && (psngr.getCar() == null) && (psngr.getLobby() != null) && (psngr.getDestination() != null))

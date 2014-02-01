@@ -325,11 +325,10 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                         break;
                 }
 
-                if (status == PlayerAIBase.STATUS.POWER_UP_PLAYED)
+                if (plyrStatus != getMe() && status == PlayerAIBase.STATUS.POWER_UP_PLAYED)
                 {
                     if (getMyPassenger() != null)
                     {
-                        /*
                         double abandon = evaluateAbandonment(getMyPassenger());
                         double cont = evaluateCurrentDelivery(getMyPassenger());
                         if (cont < (abandon * ABANDONMENT_FACTOR))
@@ -337,7 +336,6 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                             java.util.List<Company> comps = getCompanies();
                             ptDest = chooseNearestCompanyWithoutEnemy(comps, getMyPassenger()).getBusStop();
                         }
-                        */
                     }
                     else {
                         // we don't have a passenger
@@ -417,7 +415,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
 
         if (canPlay.isEmpty()) {
             // discard cards
-            if (Math.random() < .80) {
+            if (Math.random() < .66) {
                 if (!getPowerUpHand().isEmpty()) System.out.println("Discarding");
                 for (PowerUp current : getPowerUpHand()) {
                     if (current.getCard().equals(PowerUp.CARD.MULT_DELIVER_AT_COMPANY) || current.getCard().equals(PowerUp.CARD.MULT_DELIVERING_PASSENGER)) {
@@ -426,7 +424,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                         privatePowerUpHand.remove(current);
                         break;
                     }
-                    else if (Math.random() < .63) {
+                    else if (Math.random() < .43) {
                         System.out.println("Discarded");
                         playCards.invoke(PlayerAIBase.CARD_ACTION.DISCARD, current);
                         privatePowerUpHand.remove(current);
@@ -436,6 +434,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
             }
             return;
         }
+
         // Evaluate value of cards
         float highValue = 0;
         PowerUp toPlay = null;
@@ -457,7 +456,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                         privatePowerUpHand.remove(current);
                         break;
                     }
-                    else if (Math.random() < .7) {
+                    else if (Math.random() < .4) {
                         System.out.println("Discarded");
                         playCards.invoke(PlayerAIBase.CARD_ACTION.DISCARD, current);
                         privatePowerUpHand.remove(current);
@@ -770,7 +769,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
             int distToDest = SimpleAStar.CalculatePath(
                     getGameMap(), psngr.getLobby().getBusStop(), psngr.getDestination().getBusStop()).size();
             int totalDist = distToDest + distToPassenger;
-            double currPoint = (double) psngr.getPointsDelivered() / totalDist;
+            double currPoint = (double) Math.sqrt(psngr.getPointsDelivered()) / totalDist;
             passengersByValue.put(currPoint, psngr);
         }
 
@@ -815,13 +814,13 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         int distToDest = SimpleAStar.CalculatePath(
                 getGameMap(), psngr.getLobby().getBusStop(), psngr.getDestination().getBusStop()).size();
         int totalDist = distToDest + distToPassenger;
-        return (double) psngr.getPointsDelivered() / totalDist;
+        return (double) Math.sqrt(psngr.getPointsDelivered()) / totalDist;
     }
 
     public double evaluateCurrentDelivery(Passenger currPsngr)
     {
         int distToDest = CalculatePathPlus1(getMe(), currPsngr.getDestination().getBusStop()).size();
-        double valueOfCurrentDelivery = (double) currPsngr.getPointsDelivered() / distToDest;
+        double valueOfCurrentDelivery = (double) Math.sqrt(currPsngr.getPointsDelivered()) / distToDest;
         return valueOfCurrentDelivery;
     }
 }

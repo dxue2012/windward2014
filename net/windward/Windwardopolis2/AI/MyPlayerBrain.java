@@ -13,11 +13,8 @@ import net.windward.Windwardopolis2.api.*;
 import org.apache.log4j.Logger;
 
 import java.awt.*;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URLDecoder;
 import java.util.ArrayList;
 
 /**
@@ -28,7 +25,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
     private static String NAME = "James Gosling";
 
     // bugbug - put your school name here. Must be 11 letters or less (ie use MIT, not Massachussets Institute of Technology).
-    public static String SCHOOL = "Windward U.";
+    public static String SCHOOL = "Princeton U.";
 
     private static Logger log = Logger.getLogger(IPlayerAI.class);
 

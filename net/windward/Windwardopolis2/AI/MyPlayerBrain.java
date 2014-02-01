@@ -434,7 +434,10 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         PowerUp toPlay = null;
         Player[] playOn = new Player[1];
         for (PowerUp pu : canPlay) {
-            if (evaluatePowerUp(pu, playOn) > highValue) toPlay = pu;
+            if (evaluatePowerUp(pu, playOn) > highValue) {
+                highValue = evaluatePowerUp(pu,playOn);
+                toPlay = pu;
+            }
         }
         if (toPlay == null)  {
             // discard cards
@@ -460,8 +463,14 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
 
         if (toPlay.getCard() == PowerUp.CARD.MOVE_PASSENGER) {
             // Passenger toUseCardOn = playOn[0];
-            for (Passenger CEO : getPassengers()) {
-                if (CEO.getPointsDelivered() == 3) toPlay.setPassenger(CEO);
+            if (highValue == 10) {
+                for (Passenger CEO : getPassengers()) {
+                    if (CEO.getPointsDelivered() == 3) toPlay.setPassenger(CEO);
+                }
+            } else {
+                java.util.List<Passenger> overlap = getMyPassenger().getEnemies();
+                overlap.retainAll(getMyPassenger().getDestination().getPassengers());
+                toPlay.setPassenger(overlap.get(0));
             }
         }
         if (toPlay.getCard() == PowerUp.CARD.CHANGE_DESTINATION || toPlay.getCard() == PowerUp.CARD.STOP_CAR) {

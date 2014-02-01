@@ -295,7 +295,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                             log.info(msg);
                             */
 
-                        pickup = AllPickups(getMe(), getPassengers());
+                        pickup = AllPickups(getMe(), getPassengers(), abandonedPassenger);
                         ptDest = chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop();
                         break;
                     case PASSENGER_REFUSED_ENEMY:
@@ -329,6 +329,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                 {
                     if (getMyPassenger() != null)
                     {
+                        /*
                         double abandon = evaluateAbandonment(getMyPassenger());
                         double cont = evaluateCurrentDelivery(getMyPassenger());
                         if (cont < (abandon * ABANDONMENT_FACTOR))
@@ -336,6 +337,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                             java.util.List<Company> comps = getCompanies();
                             ptDest = chooseNearestCompanyWithoutEnemy(comps, getMyPassenger()).getBusStop();
                         }
+                        */
                     }
                     else {
                         // we don't have a passenger
@@ -415,7 +417,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
 
         if (canPlay.isEmpty()) {
             // discard cards
-            if (Math.random() < .98) {
+            if (Math.random() < .80) {
                 if (!getPowerUpHand().isEmpty()) System.out.println("Discarding");
                 for (PowerUp current : getPowerUpHand()) {
                     if (current.getCard().equals(PowerUp.CARD.MULT_DELIVER_AT_COMPANY) || current.getCard().equals(PowerUp.CARD.MULT_DELIVERING_PASSENGER)) {
@@ -446,7 +448,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
         }
         if (toPlay == null)  {
             // discard cards
-            if (Math.random() < .5) {
+            if (Math.random() < .2) {
                 if (!getPowerUpHand().isEmpty()) System.out.println("Discarding");
                 for (PowerUp current : getPowerUpHand()) {
                     if (current.getCard().equals(PowerUp.CARD.MULT_DELIVER_AT_COMPANY) || current.getCard().equals(PowerUp.CARD.MULT_DELIVERING_PASSENGER)) {

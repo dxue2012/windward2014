@@ -24,7 +24,7 @@ import java.util.Comparator;
  */
 public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI {
     // bugbug - put your team name here.
-    private static String NAME = "James Gosling";
+    private static String NAME = "ICanChooseTheBestPassenger";
 
     // bugbug - put your school name here. Must be 11 letters or less (ie use MIT, not Massachussets Institute of Technology).
     public static String SCHOOL = "Princeton U.";
@@ -210,7 +210,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
             java.util.ArrayList<Passenger> pickup = AllPickups(me, passengers);
 
             // get the path from where we are to the dest.
-            java.util.ArrayList<Point> path = CalculatePathPlus1(me, pickup.get(0).getLobby().getBusStop());
+            java.util.ArrayList<Point> path = CalculatePathPlus1(me, choosePassenger(pickup).getLobby().getBusStop());
             sendOrders.invoke("ready", path, pickup);
         } catch (RuntimeException ex) {
             log.fatal("setup(" + me == null ? "NULL" : me.getName() + ") Exception: " + ex.getMessage());
@@ -256,7 +256,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                 case PASSENGER_NO_ACTION:
                     if (getMe().getLimo().getPassenger() == null) {
                         pickup = AllPickups(plyrStatus, getPassengers());
-                        ptDest = pickup.get(0).getLobby().getBusStop();
+                        ptDest = choosePassenger(pickup).getLobby().getBusStop();
                     } else {
                         ptDest = getMe().getLimo().getPassenger().getDestination().getBusStop();
                     }
@@ -264,7 +264,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                 case PASSENGER_DELIVERED:
                 case PASSENGER_ABANDONED:
                     pickup = AllPickups(getMe(), getPassengers());
-                    ptDest = pickup.get(0).getLobby().getBusStop();
+                    ptDest = choosePassenger(pickup).getLobby().getBusStop();
                     break;
                 case PASSENGER_REFUSED_ENEMY:
                     //add in random so no refuse loop
@@ -319,7 +319,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                     pickup = AllPickups(getMe(), getPassengers());
                     if (pickup.size() == 0)
                         break;
-                    ptDest = pickup.get(0).getLobby().getBusStop();
+                    ptDest = choosePassenger(pickup).getLobby().getBusStop();
                     break;
             }
 
@@ -334,7 +334,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
 
             if (log.isDebugEnabled())
             {
-                log.debug(status + "; Path:" + (path.size() > 0 ? path.get(0).toString() : "{n/a}") + "-" + (path.size() > 0 ? path.get(path.size()-1).toString() : "{n/a}") + ", " + path.size() + " steps; Pickup:" + (pickup.size() == 0 ? "{none}" : pickup.get(0).getName()) + ", " + pickup.size() + " total");
+                log.debug(status + "; Path:" + (path.size() > 0 ? path.get(0).toString() : "{n/a}") + "-" + (path.size() > 0 ? path.get(path.size()-1).toString() : "{n/a}") + ", " + path.size() + " steps; Pickup:" + (pickup.size() == 0 ? "{none}" : choosePassenger(pickup).getName()) + ", " + pickup.size() + " total");
             }
 
             // update our saved Player to match new settings
@@ -528,5 +528,34 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
 
         //add sort by random so no loops for can't pickup
         return pickup;
+    }
+
+    /*
+    Below is our own code
+
+     */
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public Passenger choosePassenger(ArrayList<Passenger> pickup)
+    {
+        if (pickup == null)
+            return null;
+
+        double currMaxPoint = Double.MIN_VALUE;
+        Passenger bestPsngr = null;
+        for (Passenger psngr: pickup)
+        {
+            int distToPassenger = CalculatePathPlus1(getMe(), psngr.getCar().getMapPosition()).size();
+            int distToDest = SimpleAStar.CalculatePath(
+                    getGameMap(), psngr.getLobby().getBusStop(), psngr.getDestination().getBusStop()).size();
+            int totalDist = distToDest + distToPassenger;
+            double currPoint = psngr.getPointsDelivered() / totalDist;
+            if (currPoint > currMaxPoint)
+            {
+                bestPsngr = psngr;
+                currMaxPoint = currPoint;
+            }
+        }
+
+        return bestPsngr;
     }
 }

@@ -24,7 +24,7 @@ import java.util.Comparator;
  */
 public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI {
     // bugbug - put your team name here.
-    private static String NAME = "James Gosling";
+    private static String NAME = "ICanChooseTheBestPassenger";
 
     // bugbug - put your school name here. Must be 11 letters or less (ie use MIT, not Massachussets Institute of Technology).
     public static String SCHOOL = "Princeton U.";
@@ -210,7 +210,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
             java.util.ArrayList<Passenger> pickup = AllPickups(me, passengers);
 
             // get the path from where we are to the dest.
-            java.util.ArrayList<Point> path = CalculatePathPlus1(me, pickup.get(0).getLobby().getBusStop());
+            java.util.ArrayList<Point> path = CalculatePathPlus1(me, chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop());
             sendOrders.invoke("ready", path, pickup);
         } catch (RuntimeException ex) {
             log.fatal("setup(" + me == null ? "NULL" : me.getName() + ") Exception: " + ex.getMessage());
@@ -256,7 +256,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                 case PASSENGER_NO_ACTION:
                     if (getMe().getLimo().getPassenger() == null) {
                         pickup = AllPickups(plyrStatus, getPassengers());
-                        ptDest = pickup.get(0).getLobby().getBusStop();
+                        ptDest = chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop();
                     } else {
                         ptDest = getMe().getLimo().getPassenger().getDestination().getBusStop();
                     }
@@ -264,18 +264,13 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                 case PASSENGER_DELIVERED:
                 case PASSENGER_ABANDONED:
                     pickup = AllPickups(getMe(), getPassengers());
-                    ptDest = pickup.get(0).getLobby().getBusStop();
+                    ptDest = chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop();
                     break;
                 case PASSENGER_REFUSED_ENEMY:
-                    //add in random so no refuse loop
+                    // override algorithm for choosing the company to abandon the passenger
                     java.util.List<Company> comps = getCompanies();
-                    while(ptDest == null) {
-                        int randCompany = rand.nextInt(comps.size());
-                        if (comps.get(randCompany) != getMe().getLimo().getPassenger().getDestination()) {
-                            ptDest = comps.get(randCompany).getBusStop();
-                            break;
-                        }
-                    }
+                    Company abandonCompany = chooseNearestCompany(comps, getMe().getLimo().getPassenger().getDestination());
+                    ptDest = abandonCompany.getBusStop();
                     break;
                 case PASSENGER_DELIVERED_AND_PICKED_UP:
                 case PASSENGER_PICKED_UP:
@@ -303,7 +298,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                     pickup = AllPickups(getMe(), getPassengers());
                     if (pickup.size() == 0)
                         break;
-                    ptDest = pickup.get(0).getLobby().getBusStop();
+                    ptDest = chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop();
                     break;
             }
 
@@ -318,7 +313,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
 
             if (log.isDebugEnabled())
             {
-                log.debug(status + "; Path:" + (path.size() > 0 ? path.get(0).toString() : "{n/a}") + "-" + (path.size() > 0 ? path.get(path.size()-1).toString() : "{n/a}") + ", " + path.size() + " steps; Pickup:" + (pickup.size() == 0 ? "{none}" : pickup.get(0).getName()) + ", " + pickup.size() + " total");
+                log.debug(status + "; Path:" + (path.size() > 0 ? path.get(0).toString() : "{n/a}") + "-" + (path.size() > 0 ? path.get(path.size()-1).toString() : "{n/a}") + ", " + path.size() + " steps; Pickup:" + (pickup.size() == 0 ? "{none}" : chooseBestPassenger(getAvailablePassengers(pickup)).getName()) + ", " + pickup.size() + " total");
             }
 
             // update our saved Player to match new settings
@@ -525,5 +520,102 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
 
         //add sort by random so no loops for can't pickup
         return pickup;
+    }
+
+    /*
+    Below is our own code
+
+     */
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public Passenger chooseBestPassenger(BinarySearchST<Double, Passenger> passengersByValue)
+    {
+        // default best CEO
+        Passenger bestPsngr = passengersByValue.get(passengersByValue.max());
+
+        // get array of empty cars
+        java.util.ArrayList<Limo> emptyLimos = new ArrayList<Limo>();
+        for (Player player: getPlayers())
+        {
+            if (player.getLimo().getPassenger() == null)
+                emptyLimos.add(player.getLimo());
+        }
+
+        // compare our distance to each passenger with that of other limos
+        // returns the nearest passenger with the highest value if no other cars are in front of us
+        while (!passengersByValue.isEmpty())
+        {
+            Passenger psngr = passengersByValue.get(passengersByValue.max());
+            int distToPassenger = CalculatePathPlus1(getMe(), psngr.getLobby().getBusStop()).size();
+            for (Limo opp: emptyLimos)
+            {
+                int oppDistToPassenger = SimpleAStar.CalculatePath(getGameMap(), opp.getMapPosition(), psngr.getLobby().getBusStop()).size();
+                if (oppDistToPassenger < distToPassenger)
+                {
+                    passengersByValue.deleteMax();
+                    break;
+                }
+            }
+
+            return psngr;
+        }
+
+        // if, unfortunately, we cannot locate such a passenger, we just choose the "best" passenger with the highest
+        // point-to-dist ratio
+        return bestPsngr;
+    }
+
+    public BinarySearchST<Double, Passenger> getAvailablePassengers(ArrayList<Passenger> pickup)
+    {
+        if (pickup == null)
+            return null;
+
+        BinarySearchST<Double, Passenger> passengersByValue = new BinarySearchST<Double, Passenger>();
+
+        double currMaxPoint = Double.MIN_VALUE;
+        Passenger bestPsngr = null;
+        for (Passenger psngr: pickup)
+        {
+            int distToPassenger = CalculatePathPlus1(getMe(), psngr.getLobby().getBusStop()).size();
+            int distToDest = SimpleAStar.CalculatePath(
+                    getGameMap(), psngr.getLobby().getBusStop(), psngr.getDestination().getBusStop()).size();
+            int totalDist = distToDest + distToPassenger;
+            double currPoint = (double) psngr.getPointsDelivered() / totalDist;
+            passengersByValue.put(currPoint, psngr);
+            /*
+            if (currPoint > currMaxPoint)
+            {
+                bestPsngr = psngr;
+                currMaxPoint = currPoint;
+            }
+            */
+        }
+
+        return passengersByValue;
+    }
+
+    /**
+     * Chooses the nearest company to abandon the current passenger. Does not return to the previous
+     * company that was refused by the passenger.
+     * @param comps
+     * @param refusedComp
+     * @return the nearest company to abandon the current passenger
+     */
+    public Company chooseNearestCompany(java.util.List<Company> comps, Company refusedComp)
+    {
+        int shortestDist = Integer.MAX_VALUE;
+        Company nearestComp = null;
+        for (Company comp : comps)
+        {
+            if (comp.equals(refusedComp))
+                continue;
+            int distToComp = CalculatePathPlus1(getMe(), comp.getBusStop()).size();
+            if (distToComp < shortestDist)
+            {
+                shortestDist = distToComp;
+                nearestComp = comp;
+            }
+        }
+
+        return nearestComp;
     }
 }

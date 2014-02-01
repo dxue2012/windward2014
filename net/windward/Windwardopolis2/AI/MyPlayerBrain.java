@@ -292,28 +292,12 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                 case PASSENGER_DELIVERED:
                 case PASSENGER_ABANDONED:
                     if (getMe().getLimo().getCoffeeServings() <= 0) {
-                        java.util.List<CoffeeStore> cof = getCoffeeStores();
-                        Collections.sort(cof, new Comparator<CoffeeStore>() {
-                          public int compare (CoffeeStore a, CoffeeStore b) {
-                            Integer distA = SimpleAStar.CalculatePath(getGameMap(), getMe().getLimo().getMapPosition(), a.getBusStop()).size();
-                            Integer distB = SimpleAStar.CalculatePath(getGameMap(), getMe().getLimo().getMapPosition(), b.getBusStop()).size();
-                            return Integer.compare(distA, distB);
-                          }
-                      });
-                      ptDest = cof.get(0).getBusStop();
+                      ptDest = getCoffeeDest();
                     }
                     break;
                 case PASSENGER_REFUSED_NO_COFFEE:
                 case PASSENGER_DELIVERED_AND_PICK_UP_REFUSED:
-                    java.util.List<CoffeeStore> cof = getCoffeeStores();
-                  Collections.sort(cof, new Comparator<CoffeeStore>() {
-                    public int compare (CoffeeStore a, CoffeeStore b) {
-                      Integer distA = SimpleAStar.CalculatePath(getGameMap(), getMe().getLimo().getMapPosition(), a.getBusStop()).size();
-                      Integer distB = SimpleAStar.CalculatePath(getGameMap(), getMe().getLimo().getMapPosition(), b.getBusStop()).size();
-                      return Integer.compare(distA, distB);
-                    }
-                  });
-                  ptDest = cof.get(0).getBusStop();
+                    ptDest = getCoffeeDest();
                     break;
                 case COFFEE_STORE_CAR_RESTOCKED:
                     pickup = AllPickups(getMe(), getPassengers());
@@ -352,6 +336,19 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
             ex.printStackTrace();
         }
     }
+
+    private Point getCoffeeDest() {
+      java.util.List<CoffeeStore> cof = getCoffeeStores();
+      Collections.sort(cof, new Comparator<CoffeeStore>() {
+        public int compare (CoffeeStore a, CoffeeStore b) {
+          Integer distA = SimpleAStar.CalculatePath(getGameMap(), getMe().getLimo().getMapPosition(), a.getBusStop()).size();
+          Integer distB = SimpleAStar.CalculatePath(getGameMap(), getMe().getLimo().getMapPosition(), b.getBusStop()).size();
+          return Integer.compare(distA, distB);
+        }
+      });
+    return cof.get(0).getBusStop();
+  }
+
 
     private void MaybePlayPowerUp() {
         if ((getPowerUpHand().size() != 0) && (rand.nextInt(50) < 30))

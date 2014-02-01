@@ -302,26 +302,16 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                         //pickup = AllPickups(getMe(), getPassengers());
                         ptDest = getMe().getLimo().getPassenger().getDestination().getBusStop();
                         break;
-
-                }
-                // coffee store override
-                if (getMe().getLimo().getCoffeeServings() <= 0) {
-                    switch (status)
-                    {
-                        case PASSENGER_DELIVERED_AND_PICKED_UP:
-                        case PASSENGER_DELIVERED:
-                        case PASSENGER_ABANDONED:
-                            ptDest = getCoffeeDest();
-                            break;
-                    }
                 }
 
                 switch (status)
                 {
+                    /*
                     case PASSENGER_REFUSED_NO_COFFEE:
                     case PASSENGER_DELIVERED_AND_PICK_UP_REFUSED:
                         ptDest = getCoffeeDest();
                         break;
+                        */
                     case COFFEE_STORE_CAR_RESTOCKED:
                         pickup = AllPickups(getMe(), getPassengers());
                         if (pickup.size() == 0)
@@ -332,11 +322,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
 
                 if (status == PlayerAIBase.STATUS.POWER_UP_PLAYED)
                 {
-                    // if we are out of coffee
-                    if (getMe().getLimo().getCoffeeServings() <= 0)
-                        ptDest = getCoffeeDest();
-                        // if we have a passenger
-                    else if (getMyPassenger() != null)
+                    if (getMyPassenger() != null)
                     {
                         double abandon = evaluateAbandonment(getMyPassenger());
                         double cont = evaluateCurrentDelivery(getMyPassenger());

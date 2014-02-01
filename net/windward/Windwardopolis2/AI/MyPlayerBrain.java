@@ -89,6 +89,8 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
      */
     private java.util.ArrayList<Passenger> privatePassengers;
 
+    private Passenger currPassenger;
+
     private Passenger abandonedPassenger;
 
     public final java.util.ArrayList<Passenger> getPassengers() {
@@ -170,6 +172,7 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
 
     public MyPlayerBrain(String name) {
         setName(!net.windward.Windwardopolis2.DotNetToJavaStringHelper.isNullOrEmpty(name) ? name : NAME);
+        currPassenger = null;
         abandonedPassenger = null;
         privatePowerUpHand = new ArrayList<PowerUp>();
         passengersDelivered = new HashSet<Passenger>();
@@ -280,14 +283,24 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                         }
                         break;
                     case PASSENGER_DELIVERED:
+                        currPassenger = null;
                         abandonedPassenger = null;
                         break;
                     case PASSENGER_ABANDONED:
+                        abandonedPassenger = currPassenger;
+                        currPassenger = null;
+                        System.out.println("abandoned passenger is " + abandonedPassenger);
+                        /*
+                        if (log.isInfoEnabled())
+                            log.info(msg);
+                            */
+
                         pickup = AllPickups(getMe(), getPassengers());
                         ptDest = chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop();
                         break;
                     case PASSENGER_REFUSED_ENEMY:
-                        abandonedPassenger = getMyPassenger();
+                        abandonedPassenger = currPassenger;
+                        System.out.println("refused passenger is " + abandonedPassenger);
 
                         // override algorithm for choosing the company to abandon the passenger
                         java.util.List<Company> comps = getCompanies();
@@ -295,27 +308,19 @@ public class MyPlayerBrain implements net.windward.Windwardopolis2.AI.IPlayerAI 
                         ptDest = abandonCompany.getBusStop();
                         break;
                     case PASSENGER_DELIVERED_AND_PICKED_UP:
+                        currPassenger = getMyPassenger();
                         abandonedPassenger = null;
                         ptDest = getMe().getLimo().getPassenger().getDestination().getBusStop();
                         break;
                     case PASSENGER_PICKED_UP:
+                        currPassenger = getMyPassenger();
+                        abandonedPassenger = null;
+
                         //pickup = AllPickups(getMe(), getPassengers());
                         ptDest = getMe().getLimo().getPassenger().getDestination().getBusStop();
                         break;
-                }
-
-                switch (status)
-                {
-                    /*
-                    case PASSENGER_REFUSED_NO_COFFEE:
-                    case PASSENGER_DELIVERED_AND_PICK_UP_REFUSED:
-                        ptDest = getCoffeeDest();
-                        break;
-                        */
                     case COFFEE_STORE_CAR_RESTOCKED:
                         pickup = AllPickups(getMe(), getPassengers());
-                        if (pickup.size() == 0)
-                            break;
                         ptDest = chooseBestPassenger(getAvailablePassengers(pickup)).getLobby().getBusStop();
                         break;
                 }
